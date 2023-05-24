@@ -1,0 +1,80 @@
+name: 'Generate Tailscale authkey'
+description: 'Generate a Tailscale authkey using OAuth credentials'
+branding:
+  icon: link-2
+  color: blue
+inputs:
+  client_id:
+    description: 'Your Tailscale OAuth client ID.'
+    required: true
+  client_secret:
+    description: 'Your Tailscale OAuth client secret.'
+    required: true
+  version:
+    description: 'ts-infi-authkey version to use.'
+    required: true
+    default: '0.1.2'
+  ephemeral:
+    description: 'Whether the created authkey is ephemeral'
+    required: false
+    default: 'true'
+  expiry:
+    description: 'Expiry time of the created authkey'
+    required: false
+    default: '5m'
+  preauth:
+    description: 'Whether the created authkey is preauthorised'
+    required: false
+    default: 'true'
+  reusable:
+    description: 'Whether the created authkey is reusable'
+    required: false
+    default: 'false'
+  tags:
+    description: 'Comma separated list of tags to apply to the authkey'
+    required: true
+    default: ''
+outputs:
+  authkey:
+    description: 'The generated authkey'
+    value: ${{ steps.generate.outputs.authkey }}
+runs:
+  using: 'composite'
+  steps:
+    - name: Check Runner OS
+      if: ${{ runner.os != 'Linux' }}
+      shell: bash
+      run: |
+        echo "::error title=⛔error hint::Support Linux Only"
+        exit 1
+    - name: Check Client ID Empty
+      if: ${{ inputs.client_id == '' }}
+      shell: bash
+      run: |
+        echo "::error title=⛔error hint::Client ID empty. Maybe you need to populate it in the Secrets for your workflow, see more in https://docs.github.com/en/actions/security-guides/encrypted-secrets"
+        exit 1
+    - name: Check Client Secret Empty
+      if: ${{ inputs.client_secret == '' }}
+      shell: bash
+      run: |
+        echo "::error title=⛔error hint::Client secret empty. Maybe you need to populate it in the Secrets for your workflow, see more in https://docs.github.com/en/actions/security-guides/encrypted-secrets"
+        exit 1
+    - name: Download ts-infi-authkey
+      shell: bash
+      env:
+        VERSION: ${{ inputs.version }}
+      run: |
+        curl -fsSL "https://github.com/nfielder/ts-infi-authkey/releases/download/v${VERSION}/ts-infi-authkey_${VERSION}_linux_amd64.tar.gz" -o ts-infi-authkey.tgz
+        tar -C /tmp -xzf ts-infi-authkey.tgz
+        rm ts-infi-authkey.tgz
+        sudo mv /tmp/ts-infi-authkey /usr/bin
+    - name: Generate Authkey
+      shell: bash
+      id: generate
+      env:
+        TS_API_CLIENT_ID: ${{ inputs.client_id }}
+        TS_API_CLIENT_SECRET: ${{ inputs.client_secret }}
+      run: |
+        generated_authkey=$(ts-infi-authkey -ephemeral=${{ inputs.ephemeral }} -expiry=${{ inputs.expiry }} -preauth=${{ inputs.preauth }} -reusable=${{ inputs.reusable }} -tags=${{ inputs.tags }})
+        echo "::add-mask::$generated_authkey"
+        echo "authkey=$generated_authkey" >> "$GITHUB_OUTPUT"

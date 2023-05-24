@@ -1,0 +1,31 @@
+name: test
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - '*'
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v3
+
+      - name: ts-infi-authkey action
+        id: get-authkey
+        uses: ./
+        with:
+          client_id: ${{ secrets.TS_API_CLIENT_ID }}
+          client_secret: ${{ secrets.TS_API_CLIENT_SECRET }}
+          tags: 'tag:gh-actions-test'
+          expiry: '5s'
+
+      - name: Check generated authkey is non-empty
+        run: |
+          if [[ "${{ steps.get-authkey.outputs.authkey }}" = "" ]]; then
+            exit 1
+          fi
