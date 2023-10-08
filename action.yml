@@ -13,7 +13,7 @@ inputs:
   version:
     description: 'ts-infi-authkey version to use.'
     required: true
-    default: '0.1.3'
+    default: '0.1.4'
   ephemeral:
     description: 'Whether the created authkey is ephemeral'
     required: false
